@@ -38,6 +38,9 @@ struct FAdaEventRule
 	float Cooldown = 0.f;
 	// Chance (0..1) that a firing event plays anything.
 	float Chance = 1.f;
+	// If above 0 the loader fires the event by itself at random times about this many seconds apart (0.5x to 1.5x),
+	// as long as an installed pack has a line for it.
+	float Interval = 0.f;
 };
 
 // Applies to every rare-pool line.
@@ -77,6 +80,9 @@ public:
 
 	// The rule of event Name (a default one if no pack lists it).
 	FAdaEventRule GetEventRule(const FString& Name) const;
+
+	// Events that fire on their own timer, with their average interval.
+	TArray<TPair<FString, float>> GetTimedEvents() const;
 
 	// All lines with a trigger Name (and whose argument is Arg, unless Arg is 0).
 	TArray<FAdaLine*> FindLines(const FString& Name, float Arg);

@@ -128,6 +128,7 @@ namespace
 			if ((*Object)->TryGetNumberField(TEXT("priority"), Number)) { Rule.Priority = static_cast<int32>(Number); }
 			if ((*Object)->TryGetNumberField(TEXT("cooldown"), Number)) { Rule.Cooldown = static_cast<float>(Number); }
 			if ((*Object)->TryGetNumberField(TEXT("chance"), Number)) { Rule.Chance = static_cast<float>(Number); }
+			if ((*Object)->TryGetNumberField(TEXT("interval"), Number)) { Rule.Interval = static_cast<float>(Number); }
 			OutEvents.Add(Pair.Key, Rule);
 		}
 	}
@@ -255,4 +256,17 @@ FAdaEventRule FAdaPackRegistry::GetEventRule(const FString& Name) const
 {
 	const FAdaEventRule* Rule = Events.Find(Name);
 	return Rule ? *Rule : FAdaEventRule();
+}
+
+TArray<TPair<FString, float>> FAdaPackRegistry::GetTimedEvents() const
+{
+	TArray<TPair<FString, float>> Timed;
+	for (const TPair<FString, FAdaEventRule>& Event : Events)
+	{
+		if (Event.Value.Interval > 0.f)
+		{
+			Timed.Emplace(Event.Key, Event.Value.Interval);
+		}
+	}
+	return Timed;
 }

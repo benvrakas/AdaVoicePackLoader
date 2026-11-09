@@ -92,5 +92,8 @@ private:
 	// Seconds until the next firing of each "random:<seconds>" trigger, by argument.
 	TMap<float, float> RandomCountdowns;
 
+	// The same for the events that have their own interval in event_rules.json, by event name.
+	TMap<FString, float> EventCountdowns;
+
 	bool bBanksTried = false;
 };

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2 (untested in game)
+
+- `general_status` now fires by itself at random about every 90 minutes (between 45 and 135), only when an installed
+  pack has a line for it. An event can have its own timer: set `interval` (seconds) in `Resources/event_rules.json`.
+
 ## 1.1.1 (untested in game)
 
 - Works better for a player on a dedicated server: deaths, damage and creature kills are also worked out from the

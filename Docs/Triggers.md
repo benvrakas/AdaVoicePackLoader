@@ -30,7 +30,7 @@ rules (a pack can override one in its pack.json `events`).
 | `world_loaded` | The player resumes a saved game (20 seconds after loading). | yes | 30 | 0 s | 100% |
 | `inventory_full` | The player inventory becomes full. | yes | 15 | 300 s | 50% |
 | `item_discard` | The player puts something in the trash slot. | yes | 10 | 300 s | 20% |
-| `general_status` | Never fires by itself; only /adapack trigger general_status or a random timer. | yes | 5 | 1800 s | 5% |
+| `general_status` | Fires by itself at random about every 90 minutes (between 45 and 135), only if a pack has a line for it; also by hand with /adapack trigger general_status. | yes | 5 | 1800 s | 100% |
 | `respawn` | The player respawns after dying. | yes | 60 | 30 s | 100% |
 | `session_resume` | The player returns to the game after 2 or more minutes in the background. | yes | 30 | 300 s | 100% |
 | `creature_death` | The player dies to a creature; plays instead of death if it has a line, else death plays. | yes | 100 | 60 s | 100% |

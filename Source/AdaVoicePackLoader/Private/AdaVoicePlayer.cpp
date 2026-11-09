@@ -235,6 +235,26 @@ void UAdaVoicePlayer::PollTriggers(float DeltaSeconds)
 		}
 	}
 
+	// Events with their own timer, when some pack has a line for them.
+	for (const TPair<FString, float>& Timed : Registry.GetTimedEvents())
+	{
+		if (Registry.FindLines(Timed.Key, 0.f).Num() == 0)
+		{
+			continue;
+		}
+		float* Countdown = EventCountdowns.Find(Timed.Key);
+		if (!Countdown)
+		{
+			Countdown = &EventCountdowns.Add(Timed.Key, Timed.Value * FMath::FRandRange(RandomMinFraction, RandomMaxFraction));
+		}
+		*Countdown -= DeltaSeconds;
+		if (*Countdown <= 0.f)
+		{
+			*Countdown = Timed.Value * FMath::FRandRange(RandomMinFraction, RandomMaxFraction);
+			Fire(Timed.Key);
+		}
+	}
+
 	for (const float Interval : Registry.GetTriggerArgs(TEXT("random")))
 	{
 		if (Interval <= 0.f)

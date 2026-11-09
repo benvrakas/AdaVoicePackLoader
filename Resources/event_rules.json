@@ -267,9 +267,10 @@
   "general_status": {
    "priority": 5,
    "cooldown": 1800,
-   "chance": 0.05,
-   "description": "Never fires by itself; only /adapack trigger general_status or a random timer.",
-   "hooked": true
+   "chance": 1.0,
+   "description": "Fires by itself at random about every 90 minutes (between 45 and 135), only if a pack has a line for it; also by hand with /adapack trigger general_status.",
+   "hooked": true,
+   "interval": 5400
   },
   "respawn": {
    "priority": 60,
