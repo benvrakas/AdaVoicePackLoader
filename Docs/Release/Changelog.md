@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 (untested in game)
+
+- Event names and their priority, cooldown and chance now live in `Resources/event_rules.json`, the loader's own file,
+  instead of being copied into every pack. A pack can still override an event in its pack.json.
+
 ## 1.0.0 (untested in game)
 
 - Loads ADA voice pack mods (`Resources/AdaPack/pack.json` + Wwise bank) and plays their lines in ADA's message box,

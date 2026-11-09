@@ -146,6 +146,13 @@ void FAdaPackRegistry::Discover()
 		return;
 	}
 	bDiscovered = true;
+	// The loader's own event rules are the defaults; a pack's "events" override them.
+	if (const TSharedPtr<IPlugin> Loader = IPluginManager::Get().FindPlugin(TEXT("AdaVoicePackLoader")))
+	{
+		const FString RulesPath = FPaths::ConvertRelativePathToFull(Loader->GetBaseDir() / TEXT("Resources") / TEXT("event_rules.json"));
+		ReadEvents(RulesPath, Events);
+		UE_LOG(LogAdaVoicePacks, Log, TEXT("%d event rule(s) from '%s'"), Events.Num(), *RulesPath);
+	}
 	for (const TSharedRef<IPlugin>& Plugin : IPluginManager::Get().GetEnabledPlugins())
 	{
 		const FString Path = FPaths::ConvertRelativePathToFull(Plugin->GetBaseDir() / TEXT("Resources") / TEXT("AdaPack") / TEXT("pack.json"));

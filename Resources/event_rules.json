@@ -1,0 +1,227 @@
+{
+ "_comment": "Event names, the triggers.md headings that mean them, and how each event behaves. Read by the loader at runtime and by D:/SFMod/Tools/AdaPacks/adapack.py when building. Priority 90 and up interrupts a playing line; cooldown is seconds before the event may fire again; chance is 0..1. A pack can override an event with an \"events\" entry in its pack.json. No voice line text belongs here.",
+ "phrases": [
+  [
+   "death / respawn",
+   "death"
+  ],
+  [
+   "fall / environmental death",
+   "fall_death"
+  ],
+  [
+   "power failure",
+   "power_failure"
+  ],
+  [
+   "production stall",
+   "production_stall"
+  ],
+  [
+   "building placement",
+   "building_placed"
+  ],
+  [
+   "building dismantle",
+   "building_dismantled"
+  ],
+  [
+   "general creature kill",
+   "creature_kill"
+  ],
+  [
+   "lizard doggo kill",
+   "doggo_kill"
+  ],
+  [
+   "research complete",
+   "research_complete"
+  ],
+  [
+   "research skip",
+   "research_skip"
+  ],
+  [
+   "milestone",
+   "milestone"
+  ],
+  [
+   "space elevator",
+   "space_elevator"
+  ],
+  [
+   "coupon",
+   "coupon"
+  ],
+  [
+   "hard drive",
+   "hard_drive"
+  ],
+  [
+   "taking damage",
+   "damage"
+  ],
+  [
+   "low health",
+   "low_health"
+  ],
+  [
+   "radiation",
+   "radiation"
+  ],
+  [
+   "hostile zone",
+   "hostile_zone"
+  ],
+  [
+   "nightfall",
+   "nightfall"
+  ],
+  [
+   "idle",
+   "idle:600"
+  ],
+  [
+   "session resume",
+   "world_loaded"
+  ],
+  [
+   "inventory full",
+   "inventory_full"
+  ],
+  [
+   "inventory",
+   "inventory_full"
+  ],
+  [
+   "item discard",
+   "item_discard"
+  ],
+  [
+   "general status",
+   "general_status"
+  ]
+ ],
+ "events": {
+  "death": {
+   "priority": 100,
+   "cooldown": 60,
+   "chance": 1.0
+  },
+  "fall_death": {
+   "priority": 100,
+   "cooldown": 60,
+   "chance": 1.0
+  },
+  "power_failure": {
+   "priority": 70,
+   "cooldown": 120,
+   "chance": 1.0
+  },
+  "production_stall": {
+   "priority": 50,
+   "cooldown": 300,
+   "chance": 0.5
+  },
+  "building_placed": {
+   "priority": 20,
+   "cooldown": 600,
+   "chance": 0.1
+  },
+  "building_dismantled": {
+   "priority": 20,
+   "cooldown": 900,
+   "chance": 0.1
+  },
+  "creature_kill": {
+   "priority": 20,
+   "cooldown": 300,
+   "chance": 0.15
+  },
+  "doggo_kill": {
+   "priority": 30,
+   "cooldown": 300,
+   "chance": 0.5
+  },
+  "research_complete": {
+   "priority": 40,
+   "cooldown": 60,
+   "chance": 1.0
+  },
+  "research_skip": {
+   "priority": 90,
+   "cooldown": 60,
+   "chance": 1.0
+  },
+  "milestone": {
+   "priority": 70,
+   "cooldown": 60,
+   "chance": 1.0
+  },
+  "space_elevator": {
+   "priority": 90,
+   "cooldown": 60,
+   "chance": 1.0
+  },
+  "coupon": {
+   "priority": 35,
+   "cooldown": 120,
+   "chance": 0.7
+  },
+  "hard_drive": {
+   "priority": 50,
+   "cooldown": 60,
+   "chance": 1.0
+  },
+  "damage": {
+   "priority": 10,
+   "cooldown": 600,
+   "chance": 0.05
+  },
+  "low_health": {
+   "priority": 55,
+   "cooldown": 180,
+   "chance": 1.0
+  },
+  "radiation": {
+   "priority": 50,
+   "cooldown": 180,
+   "chance": 1.0
+  },
+  "hostile_zone": {
+   "priority": 35,
+   "cooldown": 300,
+   "chance": 0.5
+  },
+  "nightfall": {
+   "priority": 20,
+   "cooldown": 600,
+   "chance": 0.3
+  },
+  "idle": {
+   "priority": 15,
+   "cooldown": 600,
+   "chance": 1.0
+  },
+  "world_loaded": {
+   "priority": 30,
+   "cooldown": 0,
+   "chance": 1.0
+  },
+  "inventory_full": {
+   "priority": 15,
+   "cooldown": 300,
+   "chance": 0.5
+  },
+  "item_discard": {
+   "priority": 10,
+   "cooldown": 300,
+   "chance": 0.2
+  },
+  "general_status": {
+   "priority": 5,
+   "cooldown": 1800,
+   "chance": 0.05
+  }
+ }
+}
