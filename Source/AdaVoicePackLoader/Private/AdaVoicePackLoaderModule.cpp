@@ -1,7 +1,9 @@
 #include "AdaVoicePackLoaderModule.h"
+#include "AdaChatCommand.h"
 #include "AdaGameEvents.h"
 #include "AdaPackRegistry.h"
 #include "AdaVoicePlayer.h"
+#include "FGPlayerController.h"
 #include "Patching/NativeHookManager.h"
 #include "UI/Message/FGAudioMessage.h"
 
@@ -19,6 +21,15 @@ void FAdaVoicePackLoaderModule::StartupModule()
 	SUBSCRIBE_METHOD_AFTER(UFGAudioMessage::StartPlayback, [](UFGAudioMessage* Self)
 	{
 		UAdaVoicePlayer::NotifyAudioMessageStarted(Self);
+	});
+
+	// A chat line typed on a client: /adapack runs on this game instead of going to the server.
+	SUBSCRIBE_METHOD(AFGPlayerController::EnterChatMessage, [](auto& Scope, AFGPlayerController* Self, const FString& Message)
+	{
+		if (AAdaChatCommand::RunOnClient(Self, Message))
+		{
+			Scope.Cancel();
+		}
 	});
 
 	UAdaGameEvents::RegisterHooks();

@@ -7,6 +7,6 @@ Install this mod and any pack mods (each depends on this one). Only the player w
 - [Docs/Triggers.md](Docs/Triggers.md): the events that start a line, and how to add one.
 - Packs are made with `D:\SFMod\Tools\AdaPacks\adapack.py` (see its docstring).
 
-Chat command (single-player or host): `/adapack list`, `/adapack play <pack> <line>`, `/adapack trigger <name> [arg]`.
+Chat command (single-player, host, or client on a dedicated server): `/adapack list`, `/adapack play <pack> <line>`, `/adapack trigger <name> [arg]`.
 
 The voice lines are AI-generated speech (Google Cloud Text-to-Speech).

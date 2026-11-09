@@ -35,8 +35,15 @@ The Wwise functions (`LoadBankMemoryCopy`, `PostEvent`, `RegisterGameObj`, `Stop
 the game's Wwise DLL at runtime, as BoomBoxPlus does, since the kit's Wwise version differs from the game's. Banks load
 once per session, when the first world is up (`FAdaPackRegistry::LoadBanks`).
 
+## /adapack on a client
+
+SML sends every chat line starting with `/` to the server, and a dedicated server doesn't have this mod (it is
+client-only), so it answers "Unknown command". A hook on `AFGPlayerController::EnterChatMessage` catches `/adapack` on a
+client (`NM_Client`) before the game or SML see it, cancels the call so nothing reaches the server, and runs it through
+the client's own SML chat command subsystem with `UAdaLocalCommandSender`, whose replies go straight into the local chat
+box. Single-player and the host still go through SML as before.
+
 ## Not yet
 
 - No settings menu (no on/off switch except removing the pack mods).
-- `/adapack` is a chat command, which only exists where the server side runs it: single-player and the host of a session.
 - Events in the game beyond the three in `Triggers.md`.

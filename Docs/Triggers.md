@@ -54,7 +54,10 @@ rules (a pack can override one in its pack.json `events`).
   death functions may not run on a client, so deaths, damage and kills are also worked out from replicated health.
 
 `/adapack trigger <event> [argument]` fires an event by hand for testing; `/adapack list` and `/adapack play <pack> <line>`
-list and play lines.
+list and play lines. They work in single-player, as the host, and as a client on a dedicated server (there they run on
+your own game and never reach the server).
+
+A line with no event never plays by itself. The log warns at startup when a pack has no line with an event.
 
 ## Adding an event
 

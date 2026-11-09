@@ -2,8 +2,27 @@
 #include "AdaPackRegistry.h"
 #include "AdaVoicePackLoaderModule.h"
 #include "AdaVoicePlayer.h"
-#include "Command/CommandSender.h"
+#include "Command/ChatCommandLibrary.h"
+#include "FGChatManager.h"
 #include "FGPlayerController.h"
+#include "GameFramework/GameStateBase.h"
+#include "GameFramework/PlayerState.h"
+
+namespace
+{
+	// True if the chat line Message calls this mod's command (by its name or its mod-qualified name).
+	bool IsAdaCommand(const FString& Message)
+	{
+		const FString Line = Message.TrimStartAndEnd();
+		if (!Line.StartsWith(TEXT("/")))
+		{
+			return false;
+		}
+		FString Name = Line.RightChop(1);
+		Name.Split(TEXT(" "), &Name, nullptr);
+		return Name.Equals(TEXT("adapack"), ESearchCase::IgnoreCase) || Name.Equals(TEXT("AdaVoicePackLoader:adapack"), ESearchCase::IgnoreCase);
+	}
+}
 
 AAdaChatCommand::AAdaChatCommand()
 {
@@ -18,7 +37,7 @@ EExecutionStatus AAdaChatCommand::ExecuteCommand_Implementation(UCommandSender* 
 	const AFGPlayerController* Player = Sender->GetPlayer();
 	if (Player && !Player->IsLocalController())
 	{
-		Sender->SendChatMessage(TEXT("Voice packs play on the machine that runs the command; ask the host."), FLinearColor::Yellow);
+		Sender->SendChatMessage(TEXT("Voice packs play on each player's own game; this command reached the host instead of yours."), FLinearColor::Yellow);
 		return EExecutionStatus::UNCOMPLETED;
 	}
 	const FString& What = Arguments[0];
@@ -62,6 +81,54 @@ EExecutionStatus AAdaChatCommand::ExecuteCommand_Implementation(UCommandSender* 
 	}
 	Sender->SendChatMessage(Usage.ToString(), FLinearColor::Red);
 	return EExecutionStatus::BAD_ARGUMENTS;
+}
+
+bool AAdaChatCommand::RunOnClient(AFGPlayerController* Controller, const FString& Message)
+{
+	if (!Controller || Controller->GetNetMode() != NM_Client || !Controller->IsLocalController() || !IsAdaCommand(Message))
+	{
+		return false;
+	}
+	UAdaLocalCommandSender* Sender = NewObject<UAdaLocalCommandSender>(Controller);
+	AChatCommandSubsystem* Commands = AChatCommandSubsystem::Get(Controller);
+	if (!Commands || !Commands->FindCommandByName(TEXT("adapack")))
+	{
+		UE_LOG(LogAdaVoicePacks, Warning, TEXT("'%s' typed on a client, but SML's chat commands aren't set up on this game yet"), *Message);
+		Sender->SendChatMessage(TEXT("/adapack isn't ready yet; try again in a moment."), FLinearColor::Yellow);
+		return true;
+	}
+	UE_LOG(LogAdaVoicePacks, Log, TEXT("Running '%s' on this game (client) instead of sending it to the server"), *Message.TrimStartAndEnd());
+	Commands->RunChatCommand(Message.TrimStartAndEnd().RightChop(1), Sender);
+	return true;
+}
+
+FString UAdaLocalCommandSender::GetSenderName() const
+{
+	const AFGPlayerController* Controller = GetPlayer();
+	return Controller && Controller->PlayerState ? Controller->PlayerState->GetPlayerName() : TEXT("Player");
+}
+
+AFGPlayerController* UAdaLocalCommandSender::GetPlayer() const
+{
+	return Cast<AFGPlayerController>(GetOuter());
+}
+
+void UAdaLocalCommandSender::SendChatMessage(const FString& Message, const FLinearColor PrefixColor)
+{
+	UWorld* World = GetPlayer() ? GetPlayer()->GetWorld() : nullptr;
+	AFGChatManager* ChatManager = World ? AFGChatManager::Get(World) : nullptr;
+	if (!ChatManager)
+	{
+		UE_LOG(LogAdaVoicePacks, Warning, TEXT("No chat box for the reply: %s"), *Message);
+		return;
+	}
+	FChatMessageStruct Chat;
+	Chat.MessageText = FText::FromString(Message);
+	Chat.MessageType = EFGChatMessageType::CMT_CustomMessage;
+	Chat.ServerTimeStamp = World->GetGameState() ? World->GetGameState()->GetServerWorldTimeSeconds() : 0.f;
+	Chat.MessageSenderColor = PrefixColor;
+	Chat.MessageSender = FText::FromString(TEXT("SYSTEM"));
+	ChatManager->AddChatMessageToReceived(Chat);
 }
 
 UAdaGameWorldModule::UAdaGameWorldModule()

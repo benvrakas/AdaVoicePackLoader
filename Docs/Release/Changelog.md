@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3
+
+- `/adapack` now works for a player on a dedicated server: the command runs on your own game instead of going to the
+  server (which doesn't have this mod and answered "Unknown command").
+- The log warns at startup when an installed pack has no line with an event, since the game never plays such a pack by
+  itself (only `/adapack play` does).
+
 ## 1.1.2 (untested in game)
 
 - `general_status` now fires by itself at random about every 90 minutes (between 45 and 135), only when an installed

@@ -2,12 +2,16 @@
 
 #include "CoreMinimal.h"
 #include "Command/ChatCommandInstance.h"
+#include "Command/CommandSender.h"
 #include "Module/GameWorldModule.h"
 #include "AdaChatCommand.generated.h"
 
+class AFGPlayerController;
+
 // "/adapack list" lists the installed packs and their lines, "/adapack play <pack> <line>" plays one now, "/adapack
-// trigger <name> [argument]" fires a trigger as if it happened. Chat commands run on the server, so this works in
-// single-player and for the host of a session, on the host's own game.
+// trigger <name> [argument]" fires a trigger as if it happened. In single-player and on a host SML runs it; on a client
+// RunOnClient runs it on the player's own game, since the server (often without this mod) would only answer
+// "Unknown command".
 UCLASS()
 class ADAVOICEPACKLOADER_API AAdaChatCommand : public AChatCommandInstance
 {
@@ -17,6 +21,23 @@ public:
 	AAdaChatCommand();
 
 	virtual EExecutionStatus ExecuteCommand_Implementation(UCommandSender* Sender, const TArray<FString>& Arguments, const FString& Label) override;
+
+	// Runs Message on this machine if it is an /adapack command typed on a client. Returns true if it was handled, and
+	// then it must not be sent to the server.
+	static bool RunOnClient(AFGPlayerController* Controller, const FString& Message);
+};
+
+// The local player as a command sender: replies go straight into this game's chat box.
+UCLASS()
+class ADAVOICEPACKLOADER_API UAdaLocalCommandSender : public UCommandSender
+{
+	GENERATED_BODY()
+
+public:
+	virtual FString GetSenderName() const override;
+	virtual bool IsPlayerSender() const override { return true; }
+	virtual AFGPlayerController* GetPlayer() const override;
+	virtual void SendChatMessage(const FString& Message, const FLinearColor PrefixColor) override;
 };
 
 // The mod's root game world module; registers the chat command with SML.

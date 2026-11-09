@@ -1,6 +1,7 @@
 #include "AdaPackRegistry.h"
 #include "AdaVoicePackLoaderModule.h"
 #include "AdaWwise.h"
+#include "Algo/Count.h"
 #include "Dom/JsonObject.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/FileHelper.h"
@@ -173,6 +174,15 @@ void FAdaPackRegistry::Discover()
 		}
 		ReadEvents(Path, Events);
 		UE_LOG(LogAdaVoicePacks, Log, TEXT("Pack '%s' from %s: %d line(s)"), *Pack.Id, *Plugin->GetName(), Pack.Lines.Num());
+		const int32 NoEvent = Algo::CountIf(Pack.Lines, [](const FAdaLine& Line) { return Line.Triggers.Num() == 0; });
+		if (NoEvent == Pack.Lines.Num())
+		{
+			UE_LOG(LogAdaVoicePacks, Warning, TEXT("Pack '%s': none of its lines has an event, so the game never plays them (only /adapack play does). Rebuild the pack from a CSV with an events column."), *Pack.Id);
+		}
+		else if (NoEvent > 0)
+		{
+			UE_LOG(LogAdaVoicePacks, Log, TEXT("Pack '%s': %d line(s) have no event (only /adapack play plays them)"), *Pack.Id, NoEvent);
+		}
 		Packs.Add(MoveTemp(Pack));
 	}
 	UE_LOG(LogAdaVoicePacks, Log, TEXT("%d voice pack(s) installed"), Packs.Num());
