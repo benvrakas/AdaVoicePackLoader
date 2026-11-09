@@ -106,122 +106,170 @@
   "death": {
    "priority": 100,
    "cooldown": 60,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "The player dies (any cause).",
+   "hooked": true
   },
   "fall_death": {
    "priority": 100,
    "cooldown": 60,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "The player dies from a fall; plays instead of death if it has a line, else death plays.",
+   "hooked": true
   },
   "power_failure": {
    "priority": 70,
    "cooldown": 120,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "A power circuit trips its fuse (single-player or the host).",
+   "hooked": true
   },
   "production_stall": {
    "priority": 50,
    "cooldown": 300,
-   "chance": 0.5
+   "chance": 0.5,
+   "description": "A factory stops producing or a belt backs up. NOT HOOKED YET.",
+   "hooked": false
   },
   "building_placed": {
    "priority": 20,
    "cooldown": 600,
-   "chance": 0.1
+   "chance": 0.1,
+   "description": "The player or a friend finishes building something.",
+   "hooked": true
   },
   "building_dismantled": {
    "priority": 20,
    "cooldown": 900,
-   "chance": 0.1
+   "chance": 0.1,
+   "description": "A demolition: 4 or more buildings dismantled within 10 seconds.",
+   "hooked": true
   },
   "creature_kill": {
    "priority": 20,
    "cooldown": 300,
-   "chance": 0.15
+   "chance": 0.15,
+   "description": "The player kills a creature.",
+   "hooked": true
   },
   "doggo_kill": {
    "priority": 30,
    "cooldown": 300,
-   "chance": 0.5
+   "chance": 0.5,
+   "description": "The player kills a Lizard Doggo.",
+   "hooked": true
   },
   "research_complete": {
    "priority": 40,
    "cooldown": 60,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "A MAM research is finished and collected.",
+   "hooked": true
   },
   "research_skip": {
    "priority": 90,
    "cooldown": 60,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "Research skipped or overloaded. NOT HOOKED YET.",
+   "hooked": false
   },
   "milestone": {
    "priority": 70,
    "cooldown": 60,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "A HUB milestone is delivered.",
+   "hooked": true
   },
   "space_elevator": {
    "priority": 90,
    "cooldown": 60,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "A Space Elevator phase is delivered.",
+   "hooked": true
   },
   "coupon": {
    "priority": 35,
    "cooldown": 120,
-   "chance": 0.7
+   "chance": 0.7,
+   "description": "An AWESOME Shop purchase.",
+   "hooked": true
   },
   "hard_drive": {
    "priority": 50,
    "cooldown": 60,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "A hard drive research is collected.",
+   "hooked": true
   },
   "damage": {
    "priority": 10,
    "cooldown": 600,
-   "chance": 0.05
+   "chance": 0.05,
+   "description": "The player takes damage.",
+   "hooked": true
   },
   "low_health": {
    "priority": 55,
    "cooldown": 180,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "The player drops below 25% health.",
+   "hooked": true
   },
   "radiation": {
    "priority": 50,
    "cooldown": 180,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "The player enters radiation.",
+   "hooked": true
   },
   "hostile_zone": {
    "priority": 35,
    "cooldown": 300,
-   "chance": 0.5
+   "chance": 0.5,
+   "description": "The player comes within 60 m of an enemy.",
+   "hooked": true
   },
   "nightfall": {
    "priority": 20,
    "cooldown": 600,
-   "chance": 0.3
+   "chance": 0.3,
+   "description": "Day turns to night.",
+   "hooked": true
   },
   "idle": {
    "priority": 15,
    "cooldown": 600,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "The player is idle for 10 minutes (use idle:<seconds> in a CSV events cell for another length).",
+   "hooked": true
   },
   "world_loaded": {
    "priority": 30,
    "cooldown": 0,
-   "chance": 1.0
+   "chance": 1.0,
+   "description": "The player resumes a saved game (20 seconds after loading).",
+   "hooked": true
   },
   "inventory_full": {
    "priority": 15,
    "cooldown": 300,
-   "chance": 0.5
+   "chance": 0.5,
+   "description": "The player inventory becomes full.",
+   "hooked": true
   },
   "item_discard": {
    "priority": 10,
    "cooldown": 300,
-   "chance": 0.2
+   "chance": 0.2,
+   "description": "The player puts something in the trash slot.",
+   "hooked": true
   },
   "general_status": {
    "priority": 5,
    "cooldown": 1800,
-   "chance": 0.05
+   "chance": 0.05,
+   "description": "Never fires by itself; only /adapack trigger general_status or a random timer.",
+   "hooked": true
   }
  }
 }
