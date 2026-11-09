@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.2 (untested in game)
+
+- Fixes the crash at game launch in 1.0.0 and 1.0.1: the hooks on the game's virtual functions (player and creature
+  damage and death, dismantling) weren't given a default object to resolve them through (SML assertion
+  `SampleObjectInstance`).
+
 ## 1.0.1 (untested in game)
 
 - Event names and their priority, cooldown and chance now live in `Resources/event_rules.json`, the loader's own file,

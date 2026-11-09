@@ -70,23 +70,24 @@ bool UAdaGameEvents::IsLocalPlayer(const AActor* Actor)
 
 void UAdaGameEvents::RegisterHooks()
 {
-	SUBSCRIBE_METHOD_AFTER(AFGCharacterPlayer::OnTakeDamage, [](AFGCharacterPlayer* Self, AActor*, float, const UDamageType* DamageType, AController*, AActor*)
+	// These are virtual functions, so each hook resolves the implementation through the class's default object.
+	SUBSCRIBE_METHOD_VIRTUAL_AFTER(AFGCharacterPlayer::OnTakeDamage, GetMutableDefault<AFGCharacterPlayer>(), [](AFGCharacterPlayer* Self, AActor*, float, const UDamageType* DamageType, AController*, AActor*)
 	{
 		NotifyPlayerDamaged(Self, DamageType);
 	});
-	SUBSCRIBE_METHOD_AFTER(AFGCharacterPlayer::Died, [](AFGCharacterPlayer* Self, AActor*)
+	SUBSCRIBE_METHOD_VIRTUAL_AFTER(AFGCharacterPlayer::Died, GetMutableDefault<AFGCharacterPlayer>(), [](AFGCharacterPlayer* Self, AActor*)
 	{
 		NotifyPlayerDied(Self);
 	});
-	SUBSCRIBE_METHOD_AFTER(AFGCharacterBase::OnTakeDamage, [](AFGCharacterBase* Self, AActor*, float, const UDamageType*, AController* InstigatedBy, AActor*)
+	SUBSCRIBE_METHOD_VIRTUAL_AFTER(AFGCharacterBase::OnTakeDamage, GetMutableDefault<AFGCharacterBase>(), [](AFGCharacterBase* Self, AActor*, float, const UDamageType*, AController* InstigatedBy, AActor*)
 	{
 		NotifyCreatureDamaged(Self, InstigatedBy);
 	});
-	SUBSCRIBE_METHOD_AFTER(AFGCreature::Died, [](AFGCreature* Self, AActor*)
+	SUBSCRIBE_METHOD_VIRTUAL_AFTER(AFGCreature::Died, GetMutableDefault<AFGCreature>(), [](AFGCreature* Self, AActor*)
 	{
 		NotifyCreatureDied(Self);
 	});
-	SUBSCRIBE_METHOD_AFTER(AFGBuildable::Dismantle_Implementation, [](AFGBuildable* Self)
+	SUBSCRIBE_METHOD_VIRTUAL_AFTER(AFGBuildable::Dismantle_Implementation, GetMutableDefault<AFGBuildable>(), [](AFGBuildable* Self)
 	{
 		NotifyDismantled(Self);
 	});
