@@ -128,8 +128,8 @@
    "priority": 50,
    "cooldown": 300,
    "chance": 0.5,
-   "description": "A factory stops producing or a belt backs up. NOT HOOKED YET.",
-   "hooked": false
+   "description": "Most factories (60% or more of at least 10) are idle or blocked for a full minute (single-player or the host).",
+   "hooked": true
   },
   "building_placed": {
    "priority": 20,
@@ -170,8 +170,8 @@
    "priority": 90,
    "cooldown": 60,
    "chance": 1.0,
-   "description": "Research skipped or overloaded. NOT HOOKED YET.",
-   "hooked": false
+   "description": "A second MAM research is collected within a minute of the first (research overload).",
+   "hooked": true
   },
   "milestone": {
    "priority": 70,
@@ -269,6 +269,55 @@
    "cooldown": 1800,
    "chance": 0.05,
    "description": "Never fires by itself; only /adapack trigger general_status or a random timer.",
+   "hooked": true
+  },
+  "respawn": {
+   "priority": 60,
+   "cooldown": 30,
+   "chance": 1.0,
+   "description": "The player respawns after dying.",
+   "hooked": true
+  },
+  "session_resume": {
+   "priority": 30,
+   "cooldown": 300,
+   "chance": 1.0,
+   "description": "The player returns to the game after 2 or more minutes in the background.",
+   "hooked": true
+  },
+  "creature_death": {
+   "priority": 100,
+   "cooldown": 60,
+   "chance": 1.0,
+   "description": "The player dies to a creature; plays instead of death if it has a line, else death plays.",
+   "hooked": true
+  },
+  "hazard_death": {
+   "priority": 100,
+   "cooldown": 60,
+   "chance": 1.0,
+   "description": "The player dies to an environmental hazard (radiation, gas, fire, drowning); falls back to death like creature_death.",
+   "hooked": true
+  },
+  "power_restored": {
+   "priority": 40,
+   "cooldown": 120,
+   "chance": 1.0,
+   "description": "A tripped power fuse is reset.",
+   "hooked": true
+  },
+  "production_building_placed": {
+   "priority": 25,
+   "cooldown": 600,
+   "chance": 0.15,
+   "description": "A production building (a machine) is finished; falls back to building_placed if it has no line.",
+   "hooked": true
+  },
+  "random": {
+   "priority": 5,
+   "cooldown": 0,
+   "chance": 1.0,
+   "description": "A periodic ping at random times; write random:<seconds> for the average gap (very low frequency recommended).",
    "hooked": true
   }
  }

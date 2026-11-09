@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0 (untested in game)
+
+- New events: `respawn`, `session_resume` (back in the game after 2+ minutes away), `creature_death`, `hazard_death`,
+  `power_restored`, `production_building_placed` and `random` (periodic ping). The specific deaths fall back to
+  `death`, and `production_building_placed` to `building_placed`, when a pack has no line for them.
+- `production_stall` now fires (60%+ of at least 10 factories idle or blocked for a minute), and `research_skip` fires
+  when a second MAM research is collected within a minute of the first.
+- `Docs/Triggers.md` lists every event.
+
 ## 1.0.2 (untested in game)
 
 - Fixes the crash at game launch in 1.0.0 and 1.0.1: the hooks on the game's virtual functions (player and creature

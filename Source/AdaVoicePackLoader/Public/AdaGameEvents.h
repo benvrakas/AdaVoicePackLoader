@@ -26,7 +26,7 @@ public:
 	// Called every frame with the game's local world.
 	void Tick(UWorld* World, float DeltaSeconds);
 
-	static void NotifyPlayerDamaged(AFGCharacterPlayer* Player, const UDamageType* DamageType);
+	static void NotifyPlayerDamaged(AFGCharacterPlayer* Player, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser);
 	static void NotifyPlayerDied(AFGCharacterPlayer* Player);
 	static void NotifyCreatureDamaged(AActor* Damaged, AController* InstigatedBy);
 	static void NotifyCreatureDied(AFGCreature* Creature);
@@ -66,6 +66,23 @@ private:
 	// Creatures the local player damaged recently, and when.
 	TMap<TWeakObjectPtr<AActor>, double> DamagedByPlayer;
 
-	// When the local player last took fall damage.
+	// When the local player last took damage of each kind, to tell how they died.
 	double LastFallDamage = 0.0;
+	double LastCreatureDamage = 0.0;
+	double LastHazardDamage = 0.0;
+
+	// The pawn that died, until a different one exists (the respawn).
+	TWeakObjectPtr<APawn> DeadPawn;
+	bool bPendingRespawn = false;
+
+	// When the game window went to the background (0 while it is in front).
+	double BackgroundSince = 0.0;
+
+	// MAM researches collected recently, for the overload.
+	TArray<double> ResearchTimes;
+
+	// Production stall: when factories were last counted, and how many counts in a row found most of them stalled.
+	double LastStallPoll = 0.0;
+	int32 StallPolls = 0;
+	bool bStalled = false;
 };

@@ -2,6 +2,8 @@
 #include "AdaVoicePackLoaderModule.h"
 #include "AdaVoicePlayer.h"
 #include "Buildables/FGBuildable.h"
+#include "Buildables/FGBuildableFactory.h"
+#include "Buildables/FGBuildableManufacturer.h"
 #include "Creature/Enemy/FGEnemy.h"
 #include "Creature/FGCreature.h"
 #include "EngineUtils.h"
@@ -16,6 +18,7 @@
 #include "FGTimeSubsystem.h"
 #include "GameFramework/DamageType.h"
 #include "GameFramework/PlayerController.h"
+#include "HAL/PlatformApplicationMisc.h"
 #include "Kismet/GameplayStatics.h"
 #include "Patching/NativeHookManager.h"
 
@@ -40,6 +43,37 @@ namespace
 
 	// Fall damage this recently (seconds) before a death makes it a fall death.
 	constexpr double FallDeathWindow = 1.5;
+
+	// The cause of a death is the kind of damage the player took within this many seconds of it.
+	constexpr double DeathCauseWindow = 2.0;
+
+	// Away from the game at least this long (seconds) makes coming back a session resume.
+	constexpr double ResumeAwaySeconds = 120.0;
+
+	// Two MAM researches collected within this many seconds are an overload.
+	constexpr double ResearchOverloadWindow = 60.0;
+
+	// Production stall: factories are counted this often (seconds); at least MinFactories of them, with at least this
+	// percentage stalled for StallPollsNeeded counts in a row, is a stall that ends once the percentage falls below
+	// the second one.
+	constexpr double StallPollSeconds = 15.0;
+	constexpr int32 MinFactories = 10;
+	constexpr int32 StallPercent = 60;
+	constexpr int32 RecoveredPercent = 30;
+	constexpr int32 StallPollsNeeded = 4;
+
+	// Damage types (by name) that are an environmental hazard.
+	bool IsHazardDamage(const FString& Name)
+	{
+		for (const TCHAR* Word : { TEXT("Radiation"), TEXT("Gas"), TEXT("Fire"), TEXT("Burn"), TEXT("Drown"), TEXT("Lava"), TEXT("Poison"), TEXT("Fume") })
+		{
+			if (Name.Contains(Word))
+			{
+				return true;
+			}
+		}
+		return false;
+	}
 
 	// Power circuit ids searched for tripped fuses.
 	constexpr int32 MaxCircuitId = 512;
@@ -71,9 +105,9 @@ bool UAdaGameEvents::IsLocalPlayer(const AActor* Actor)
 void UAdaGameEvents::RegisterHooks()
 {
 	// These are virtual functions, so each hook resolves the implementation through the class's default object.
-	SUBSCRIBE_METHOD_VIRTUAL_AFTER(AFGCharacterPlayer::OnTakeDamage, GetMutableDefault<AFGCharacterPlayer>(), [](AFGCharacterPlayer* Self, AActor*, float, const UDamageType* DamageType, AController*, AActor*)
+	SUBSCRIBE_METHOD_VIRTUAL_AFTER(AFGCharacterPlayer::OnTakeDamage, GetMutableDefault<AFGCharacterPlayer>(), [](AFGCharacterPlayer* Self, AActor*, float, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
 	{
-		NotifyPlayerDamaged(Self, DamageType);
+		NotifyPlayerDamaged(Self, DamageType, InstigatedBy, DamageCauser);
 	});
 	SUBSCRIBE_METHOD_VIRTUAL_AFTER(AFGCharacterPlayer::Died, GetMutableDefault<AFGCharacterPlayer>(), [](AFGCharacterPlayer* Self, AActor*)
 	{
@@ -94,16 +128,26 @@ void UAdaGameEvents::RegisterHooks()
 	UE_LOG(LogAdaVoicePacks, Log, TEXT("Game hooks installed: player damage and death, creature damage and death, dismantle"));
 }
 
-void UAdaGameEvents::NotifyPlayerDamaged(AFGCharacterPlayer* Player, const UDamageType* DamageType)
+void UAdaGameEvents::NotifyPlayerDamaged(AFGCharacterPlayer* Player, const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
 {
 	if (!IsLocalPlayer(Player))
 	{
 		return;
 	}
 	UAdaGameEvents* Events = Get();
-	if (DamageType && DamageType->GetClass()->GetName().Contains(TEXT("Fall")))
+	const double Now = FPlatformTime::Seconds();
+	const FString TypeName = DamageType ? DamageType->GetClass()->GetName() : FString();
+	if (TypeName.Contains(TEXT("Fall")))
 	{
-		Events->LastFallDamage = FPlatformTime::Seconds();
+		Events->LastFallDamage = Now;
+	}
+	else if (Cast<AFGCreature>(DamageCauser) || (InstigatedBy && Cast<AFGCreature>(InstigatedBy->GetPawn())))
+	{
+		Events->LastCreatureDamage = Now;
+	}
+	else if (IsHazardDamage(TypeName))
+	{
+		Events->LastHazardDamage = Now;
 	}
 	Fire(TEXT("damage"));
 }
@@ -114,9 +158,17 @@ void UAdaGameEvents::NotifyPlayerDied(AFGCharacterPlayer* Player)
 	{
 		return;
 	}
-	const bool bFall = FPlatformTime::Seconds() - Get()->LastFallDamage < FallDeathWindow;
-	UE_LOG(LogAdaVoicePacks, Log, TEXT("The local player died (%s)"), bFall ? TEXT("fall") : TEXT("other"));
-	if (!bFall || !UAdaVoicePlayer::Get()->Fire(TEXT("fall_death")))
+	UAdaGameEvents* Events = Get();
+	const double Now = FPlatformTime::Seconds();
+	Events->DeadPawn = Player;
+	Events->bPendingRespawn = true;
+	const TCHAR* Cause = Now - Events->LastFallDamage < DeathCauseWindow ? TEXT("fall_death")
+		: Now - Events->LastCreatureDamage < DeathCauseWindow ? TEXT("creature_death")
+		: Now - Events->LastHazardDamage < DeathCauseWindow ? TEXT("hazard_death")
+		: nullptr;
+	UE_LOG(LogAdaVoicePacks, Log, TEXT("The local player died (%s)"), Cause ? Cause : TEXT("other"));
+	// A pack without a line for the specific cause still gets its plain death lines.
+	if (!Cause || !UAdaVoicePlayer::Get()->Fire(Cause))
 	{
 		Fire(TEXT("death"));
 	}
@@ -169,8 +221,13 @@ void UAdaGameEvents::OnSchematicPurchased(TSubclassOf<UFGSchematic> Schematic)
 	switch (Type)
 	{
 	case ESchematicType::EST_MAM:
-		Fire(TEXT("research_complete"));
+	{
+		const double Now = FPlatformTime::Seconds();
+		ResearchTimes.RemoveAll([Now](double Time) { return Now - Time > ResearchOverloadWindow; });
+		ResearchTimes.Add(Now);
+		Fire(ResearchTimes.Num() >= 2 ? TEXT("research_skip") : TEXT("research_complete"));
 		break;
+	}
 	case ESchematicType::EST_Milestone:
 		Fire(Name.Contains(TEXT("Elevator")) || Name.Contains(TEXT("GamePhase")) ? TEXT("space_elevator") : TEXT("milestone"));
 		break;
@@ -187,6 +244,11 @@ void UAdaGameEvents::OnSchematicPurchased(TSubclassOf<UFGSchematic> Schematic)
 
 void UAdaGameEvents::OnBuildableConstructed(AFGBuildable* Buildable)
 {
+	// A pack without a line for production buildings still gets its plain building lines.
+	if (Cast<AFGBuildableFactory>(Buildable) && UAdaVoicePlayer::Get()->Fire(TEXT("production_building_placed")))
+	{
+		return;
+	}
 	Fire(TEXT("building_placed"));
 }
 
@@ -224,6 +286,24 @@ void UAdaGameEvents::BindDelegates(UWorld* World)
 void UAdaGameEvents::Tick(UWorld* World, float DeltaSeconds)
 {
 	BindDelegates(World);
+	const double Now = FPlatformTime::Seconds();
+	if (!FPlatformApplicationMisc::IsThisApplicationForeground())
+	{
+		if (BackgroundSince == 0.0)
+		{
+			BackgroundSince = Now;
+		}
+	}
+	else if (BackgroundSince > 0.0)
+	{
+		const double Away = Now - BackgroundSince;
+		BackgroundSince = 0.0;
+		if (Away >= ResumeAwaySeconds)
+		{
+			UE_LOG(LogAdaVoicePacks, Log, TEXT("Back in the game after %.0f s"), Away);
+			Fire(TEXT("session_resume"));
+		}
+	}
 	AFGCharacterPlayer* Player = Cast<AFGCharacterPlayer>(UGameplayStatics::GetPlayerPawn(World, 0));
 	if (!Player)
 	{
@@ -245,6 +325,13 @@ void UAdaGameEvents::Tick(UWorld* World, float DeltaSeconds)
 
 void UAdaGameEvents::PollPlayer(UWorld* World, AFGCharacterPlayer* Player)
 {
+	if (bPendingRespawn && Player != DeadPawn.Get())
+	{
+		bPendingRespawn = false;
+		DeadPawn = nullptr;
+		Fire(TEXT("respawn"));
+	}
+
 	if (const UFGHealthComponent* Health = Player->GetHealthComponent())
 	{
 		const float Fraction = Health->GetMaxHealth() > 0.f ? Health->GetCurrentHealth() / Health->GetMaxHealth() : 1.f;
@@ -328,11 +415,44 @@ void UAdaGameEvents::PollWorld(UWorld* World, AFGCharacterPlayer* Player)
 						Fire(TEXT("power_failure"));
 					}
 				}
-				else
+				else if (TriggeredFuses.Remove(Id) > 0)
 				{
-					TriggeredFuses.Remove(Id);
+					Fire(TEXT("power_restored"));
 				}
 			}
+		}
+	}
+
+	// Factories are only simulated on the machine that runs the factory.
+	const double Now = FPlatformTime::Seconds();
+	if (World->GetNetMode() != NM_Client && Now - LastStallPoll >= StallPollSeconds)
+	{
+		LastStallPoll = Now;
+		int32 Total = 0;
+		int32 Stalled = 0;
+		for (TActorIterator<AFGBuildableManufacturer> It(World); It; ++It)
+		{
+			const EProductionStatus Status = It->GetProductionIndicatorStatus();
+			if (Status == EProductionStatus::IS_NONE)
+			{
+				continue;
+			}
+			++Total;
+			Stalled += (Status == EProductionStatus::IS_STANDBY || Status == EProductionStatus::IS_ERROR) ? 1 : 0;
+		}
+		if (Total >= MinFactories && Stalled * 100 >= Total * StallPercent)
+		{
+			if (++StallPolls >= StallPollsNeeded && !bStalled)
+			{
+				bStalled = true;
+				UE_LOG(LogAdaVoicePacks, Log, TEXT("Production stall: %d of %d factories stalled"), Stalled, Total);
+				Fire(TEXT("production_stall"));
+			}
+		}
+		else if (Total < MinFactories || Stalled * 100 < Total * RecoveredPercent)
+		{
+			StallPolls = 0;
+			bStalled = false;
 		}
 	}
 }
