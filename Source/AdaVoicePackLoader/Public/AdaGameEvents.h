@@ -39,6 +39,18 @@ private:
 	UFUNCTION()
 	void OnBuildableConstructed(AFGBuildable* Buildable);
 
+	// A buildable left the world; on a client this is how a dismantle near the player is seen.
+	UFUNCTION()
+	void OnBuildableRemoved(AFGBuildable* Buildable);
+
+	// The local player died: fires the event for Cause (null for a plain death) unless this death was already handled.
+	void OnPlayerDeath(const TCHAR* Cause);
+
+	// Works out damage and deaths from replicated state (health, velocity, radiation, nearby creatures), which is how a
+	// client sees them when the game's damage and death functions only run on the server.
+	void WatchHealth(UWorld* World, AFGCharacterPlayer* Player);
+	void WatchCreatureDeaths(UWorld* World, AFGCharacterPlayer* Player);
+
 	// Binds the managers' delegates once they exist in World.
 	void BindDelegates(UWorld* World);
 
@@ -50,6 +62,7 @@ private:
 	TWeakObjectPtr<UWorld> BoundWorld;
 	bool bSchematicsBound = false;
 	bool bBuildablesBound = false;
+	bool bRemovalsBound = false;
 
 	float PollTimer = 0.f;
 	float WorldPollTimer = 0.f;
@@ -71,6 +84,16 @@ private:
 	double LastCreatureDamage = 0.0;
 	double LastHazardDamage = 0.0;
 
+	// Health as last polled, whether the local player was dead, when a death was last handled, and when the player was
+	// last falling fast (cm/s downwards).
+	float LastHealth = -1.f;
+	bool bWasDead = false;
+	double LastDeathHandled = 0.0;
+	double LastFastFall = 0.0;
+
+	// Creatures already counted as killed (client only).
+	TSet<TWeakObjectPtr<AActor>> CountedKills;
+
 	// The pawn that died, until a different one exists (the respawn).
 	TWeakObjectPtr<APawn> DeadPawn;
 	bool bPendingRespawn = false;
@@ -85,4 +108,5 @@ private:
 	double LastStallPoll = 0.0;
 	int32 StallPolls = 0;
 	bool bStalled = false;
+	int32 StallPollCount = 0;
 };

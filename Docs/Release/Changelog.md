@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1 (untested in game)
+
+- Works better for a player on a dedicated server: deaths, damage and creature kills are also worked out from the
+  replicated health, power fuse trips and factory status are read on the client, and dismantles near the player are
+  seen when the buildable is removed. Duplicate firings of the same death are ignored.
+- Logs `Factory count: N factories, M idle or blocked` every 5 minutes, to show what the production stall sees.
+
 ## 1.1.0 (untested in game)
 
 - New events: `respawn`, `session_resume` (back in the game after 2+ minutes away), `creature_death`, `hazard_death`,

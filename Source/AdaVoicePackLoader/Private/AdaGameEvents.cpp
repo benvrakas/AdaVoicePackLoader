@@ -62,6 +62,21 @@ namespace
 	constexpr int32 RecoveredPercent = 30;
 	constexpr int32 StallPollsNeeded = 4;
 
+	// Falling faster than this (cm/s) counts as a fall: a death or damage within FallDeathWindow after it is a fall's.
+	constexpr float FastFallSpeed = 1500.f;
+
+	// A creature this close (cm) to the player when they die or lose health is what hurt them.
+	constexpr float CreatureThreatDistance = 1500.f;
+
+	// A creature that dies this close (cm) to the local player counts as a kill on a client.
+	constexpr float KillDistance = 4000.f;
+
+	// On a client, a buildable removed this close (cm) to the player is a dismantle (farther ones are streaming out).
+	constexpr float ClientDismantleDistance = 3000.f;
+
+	// A second death within this many seconds of the last is the same death.
+	constexpr double SameDeathSeconds = 5.0;
+
 	// Damage types (by name) that are an environmental hazard.
 	bool IsHazardDamage(const FString& Name)
 	{
@@ -161,11 +176,21 @@ void UAdaGameEvents::NotifyPlayerDied(AFGCharacterPlayer* Player)
 	UAdaGameEvents* Events = Get();
 	const double Now = FPlatformTime::Seconds();
 	Events->DeadPawn = Player;
-	Events->bPendingRespawn = true;
-	const TCHAR* Cause = Now - Events->LastFallDamage < DeathCauseWindow ? TEXT("fall_death")
+	Events->OnPlayerDeath(Now - Events->LastFallDamage < DeathCauseWindow ? TEXT("fall_death")
 		: Now - Events->LastCreatureDamage < DeathCauseWindow ? TEXT("creature_death")
 		: Now - Events->LastHazardDamage < DeathCauseWindow ? TEXT("hazard_death")
-		: nullptr;
+		: nullptr);
+}
+
+void UAdaGameEvents::OnPlayerDeath(const TCHAR* Cause)
+{
+	const double Now = FPlatformTime::Seconds();
+	if (Now - LastDeathHandled < SameDeathSeconds)
+	{
+		return;
+	}
+	LastDeathHandled = Now;
+	bPendingRespawn = true;
 	UE_LOG(LogAdaVoicePacks, Log, TEXT("The local player died (%s)"), Cause ? Cause : TEXT("other"));
 	// A pack without a line for the specific cause still gets its plain death lines.
 	if (!Cause || !UAdaVoicePlayer::Get()->Fire(Cause))
@@ -252,6 +277,16 @@ void UAdaGameEvents::OnBuildableConstructed(AFGBuildable* Buildable)
 	Fire(TEXT("building_placed"));
 }
 
+void UAdaGameEvents::OnBuildableRemoved(AFGBuildable* Buildable)
+{
+	const UWorld* World = Buildable ? Buildable->GetWorld() : nullptr;
+	const APawn* Pawn = World ? UGameplayStatics::GetPlayerPawn(World, 0) : nullptr;
+	if (Pawn && !World->bIsTearingDown && FVector::Dist(Buildable->GetActorLocation(), Pawn->GetActorLocation()) < ClientDismantleDistance)
+	{
+		NotifyDismantled(Buildable);
+	}
+}
+
 void UAdaGameEvents::BindDelegates(UWorld* World)
 {
 	if (BoundWorld.Get() != World)
@@ -259,6 +294,10 @@ void UAdaGameEvents::BindDelegates(UWorld* World)
 		BoundWorld = World;
 		bSchematicsBound = false;
 		bBuildablesBound = false;
+		bRemovalsBound = false;
+		CountedKills.Reset();
+		LastHealth = -1.f;
+		bWasDead = false;
 		bWasDay.Reset();
 		TriggeredFuses.Reset();
 		DamagedByPlayer.Reset();
@@ -270,6 +309,15 @@ void UAdaGameEvents::BindDelegates(UWorld* World)
 			Schematics->PurchasedSchematicDelegate.AddDynamic(this, &UAdaGameEvents::OnSchematicPurchased);
 			bSchematicsBound = true;
 			UE_LOG(LogAdaVoicePacks, Log, TEXT("Bound to the schematic manager"));
+		}
+	}
+	if (!bRemovalsBound && World->GetNetMode() == NM_Client)
+	{
+		if (AFGBuildableSubsystem* Buildables = AFGBuildableSubsystem::Get(World))
+		{
+			Buildables->mBuildableRemovedDelegate.AddDynamic(this, &UAdaGameEvents::OnBuildableRemoved);
+			bRemovalsBound = true;
+			UE_LOG(LogAdaVoicePacks, Log, TEXT("Client: watching removed buildables for dismantles"));
 		}
 	}
 	if (!bBuildablesBound)
@@ -323,8 +371,87 @@ void UAdaGameEvents::Tick(UWorld* World, float DeltaSeconds)
 	}
 }
 
+void UAdaGameEvents::WatchHealth(UWorld* World, AFGCharacterPlayer* Player)
+{
+	const UFGHealthComponent* Health = Player->GetHealthComponent();
+	if (!Health)
+	{
+		return;
+	}
+	const double Now = FPlatformTime::Seconds();
+	if (Player->GetVelocity().Z < -FastFallSpeed)
+	{
+		LastFastFall = Now;
+	}
+	static const FFloatProperty* RadiationProperty = FindFProperty<FFloatProperty>(AFGCharacterPlayer::StaticClass(), TEXT("mRadiationIntensity"));
+	const bool bInRadiation = RadiationProperty && RadiationProperty->GetPropertyValue_InContainer(Player) > KINDA_SMALL_NUMBER;
+	bool bCreatureNear = false;
+	const bool bNeedCreatures = (LastHealth >= 0.f && Health->GetCurrentHealth() < LastHealth) || Health->IsDead();
+	if (bNeedCreatures)
+	{
+		for (TActorIterator<AFGCreature> It(World); It && !bCreatureNear; ++It)
+		{
+			const UFGHealthComponent* Other = It->GetHealthComponent();
+			bCreatureNear = !(Other && Other->IsDead()) && FVector::Dist(It->GetActorLocation(), Player->GetActorLocation()) < CreatureThreatDistance;
+		}
+	}
+	const float Current = Health->GetCurrentHealth();
+	if (LastHealth >= 0.f && Current < LastHealth - KINDA_SMALL_NUMBER)
+	{
+		// Health lost since the last poll: the same kinds of damage the game's damage function reports.
+		if (Now - LastFastFall < FallDeathWindow)
+		{
+			LastFallDamage = Now;
+		}
+		else if (bCreatureNear)
+		{
+			LastCreatureDamage = Now;
+		}
+		else if (bInRadiation)
+		{
+			LastHazardDamage = Now;
+		}
+		if (!Health->IsDead())
+		{
+			Fire(TEXT("damage"));
+		}
+	}
+	LastHealth = Current;
+	const bool bDead = Health->IsDead();
+	if (bDead && !bWasDead)
+	{
+		DeadPawn = Player;
+		OnPlayerDeath(Now - LastFallDamage < DeathCauseWindow || Now - LastFastFall < FallDeathWindow ? TEXT("fall_death")
+			: Now - LastCreatureDamage < DeathCauseWindow || bCreatureNear ? TEXT("creature_death")
+			: Now - LastHazardDamage < DeathCauseWindow || bInRadiation ? TEXT("hazard_death")
+			: nullptr);
+	}
+	bWasDead = bDead;
+}
+
+void UAdaGameEvents::WatchCreatureDeaths(UWorld* World, AFGCharacterPlayer* Player)
+{
+	for (auto It = CountedKills.CreateIterator(); It; ++It)
+	{
+		if (!It->IsValid())
+		{
+			It.RemoveCurrent();
+		}
+	}
+	for (TActorIterator<AFGCreature> It(World); It; ++It)
+	{
+		const UFGHealthComponent* Health = It->GetHealthComponent();
+		if (Health && Health->IsDead() && !CountedKills.Contains(*It) && FVector::Dist(It->GetActorLocation(), Player->GetActorLocation()) < KillDistance)
+		{
+			CountedKills.Add(*It);
+			Fire(It->GetClass()->GetName().Contains(TEXT("Doggo")) ? TEXT("doggo_kill") : TEXT("creature_kill"));
+		}
+	}
+}
+
 void UAdaGameEvents::PollPlayer(UWorld* World, AFGCharacterPlayer* Player)
 {
+	WatchHealth(World, Player);
 	if (bPendingRespawn && Player != DeadPawn.Get())
 	{
 		bPendingRespawn = false;
@@ -384,6 +511,13 @@ void UAdaGameEvents::PollWorld(UWorld* World, AFGCharacterPlayer* Player)
 		bWasDay = bDay;
 	}
 
+	// On a client the game's creature death function doesn't run, so deaths near the player are counted from the
+	// replicated health instead.
+	if (World->GetNetMode() == NM_Client)
+	{
+		WatchCreatureDeaths(World, Player);
+	}
+
 	bool bHostile = false;
 	for (TActorIterator<AFGEnemy> It(World); It && !bHostile; ++It)
 	{
@@ -395,8 +529,7 @@ void UAdaGameEvents::PollWorld(UWorld* World, AFGCharacterPlayer* Player)
 	}
 	bHostileNear = bHostile;
 
-	// Fuses are only known on the machine that runs the factory (single-player or the host).
-	if (World->GetNetMode() != NM_Client)
+	// Circuits and their fuse state are replicated, so a client sees trips too.
 	{
 		if (const AFGCircuitSubsystem* Circuits = AFGCircuitSubsystem::GetCircuitSubsystem(World))
 		{
@@ -423,9 +556,9 @@ void UAdaGameEvents::PollWorld(UWorld* World, AFGCharacterPlayer* Player)
 		}
 	}
 
-	// Factories are only simulated on the machine that runs the factory.
+	// A client only has the factories near it, so its count is of those.
 	const double Now = FPlatformTime::Seconds();
-	if (World->GetNetMode() != NM_Client && Now - LastStallPoll >= StallPollSeconds)
+	if (Now - LastStallPoll >= StallPollSeconds)
 	{
 		LastStallPoll = Now;
 		int32 Total = 0;
@@ -439,6 +572,10 @@ void UAdaGameEvents::PollWorld(UWorld* World, AFGCharacterPlayer* Player)
 			}
 			++Total;
 			Stalled += (Status == EProductionStatus::IS_STANDBY || Status == EProductionStatus::IS_ERROR) ? 1 : 0;
+		}
+		if (++StallPollCount % 20 == 1)
+		{
+			UE_LOG(LogAdaVoicePacks, Log, TEXT("Factory count: %d factories, %d idle or blocked (%s)"), Total, Stalled, World->GetNetMode() == NM_Client ? TEXT("client, nearby only") : TEXT("all"));
 		}
 		if (Total >= MinFactories && Stalled * 100 >= Total * StallPercent)
 		{

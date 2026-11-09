@@ -47,7 +47,11 @@ rules (a pack can override one in its pack.json `events`).
   for them (or the specific event's cooldown or chance stops it), so `death` lines always cover every kind of death.
   `production_building_placed` falls back to `building_placed` the same way.
 - Only one line plays at a time, and never while one of the game's own ADA messages is playing or the game is in the
-  background. World events (power, buildings, kills, production) are detected on the machine running the factory.
+  background.
+- **On a dedicated server** the loader only runs on each player's own game. Player events, power fuses, kills near the
+  player and dismantles near the player are read from state the game replicates to clients; `production_stall` counts
+  only the factories near the client (the log's "Factory count" lines show what it sees). The game's own damage and
+  death functions may not run on a client, so deaths, damage and kills are also worked out from replicated health.
 
 `/adapack trigger <event> [argument]` fires an event by hand for testing; `/adapack list` and `/adapack play <pack> <line>`
 list and play lines.
