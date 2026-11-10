@@ -39,9 +39,10 @@ once per session, when the first world is up (`FAdaPackRegistry::LoadBanks`).
 
 SML sends every chat line starting with `/` to the server, and a dedicated server doesn't have this mod (it is
 client-only), so it answers "Unknown command". A hook on `AFGPlayerController::EnterChatMessage` catches `/adapack` on a
-client (`NM_Client`) before the game or SML see it, cancels the call so nothing reaches the server, and runs it through
-the client's own SML chat command subsystem with `UAdaLocalCommandSender`, whose replies go straight into the local chat
-box. Single-player and the host still go through SML as before.
+client (`NM_Client`) before the game or SML see it, cancels the call so nothing reaches the server, and runs the command
+itself (`AAdaChatCommand::Execute`) with `UAdaLocalCommandSender`, whose replies go straight into the local chat box.
+SML's `AChatCommandSubsystem` can't be used there: it spawns only on the server (1.1.3 tried it and answered "isn't ready
+yet" on every client). Single-player and the host still go through SML as before.
 
 ## Not yet
 

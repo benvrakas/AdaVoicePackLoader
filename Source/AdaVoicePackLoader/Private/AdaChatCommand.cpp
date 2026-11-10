@@ -2,7 +2,6 @@
 #include "AdaPackRegistry.h"
 #include "AdaVoicePackLoaderModule.h"
 #include "AdaVoicePlayer.h"
-#include "Command/ChatCommandLibrary.h"
 #include "FGChatManager.h"
 #include "FGPlayerController.h"
 #include "GameFramework/GameStateBase.h"
@@ -39,6 +38,17 @@ EExecutionStatus AAdaChatCommand::ExecuteCommand_Implementation(UCommandSender* 
 	{
 		Sender->SendChatMessage(TEXT("Voice packs play on each player's own game; this command reached the host instead of yours."), FLinearColor::Yellow);
 		return EExecutionStatus::UNCOMPLETED;
+	}
+	return Execute(Sender, Arguments);
+}
+
+EExecutionStatus AAdaChatCommand::Execute(UCommandSender* Sender, const TArray<FString>& Arguments)
+{
+	const FString Usage = GetDefault<AAdaChatCommand>()->Usage.ToString();
+	if (Arguments.Num() == 0)
+	{
+		Sender->SendChatMessage(Usage, FLinearColor::Red);
+		return EExecutionStatus::BAD_ARGUMENTS;
 	}
 	const FString& What = Arguments[0];
 	FAdaPackRegistry& Registry = FAdaPackRegistry::Get();
@@ -79,7 +89,7 @@ EExecutionStatus AAdaChatCommand::ExecuteCommand_Implementation(UCommandSender* 
 		}
 		return EExecutionStatus::COMPLETED;
 	}
-	Sender->SendChatMessage(Usage.ToString(), FLinearColor::Red);
+	Sender->SendChatMessage(Usage, FLinearColor::Red);
 	return EExecutionStatus::BAD_ARGUMENTS;
 }
 
@@ -89,16 +99,12 @@ bool AAdaChatCommand::RunOnClient(AFGPlayerController* Controller, const FString
 	{
 		return false;
 	}
+	TArray<FString> Arguments;
+	Message.TrimStartAndEnd().ParseIntoArrayWS(Arguments);
+	Arguments.RemoveAt(0);
 	UAdaLocalCommandSender* Sender = NewObject<UAdaLocalCommandSender>(Controller);
-	AChatCommandSubsystem* Commands = AChatCommandSubsystem::Get(Controller);
-	if (!Commands || !Commands->FindCommandByName(TEXT("adapack")))
-	{
-		UE_LOG(LogAdaVoicePacks, Warning, TEXT("'%s' typed on a client, but SML's chat commands aren't set up on this game yet"), *Message);
-		Sender->SendChatMessage(TEXT("/adapack isn't ready yet; try again in a moment."), FLinearColor::Yellow);
-		return true;
-	}
-	UE_LOG(LogAdaVoicePacks, Log, TEXT("Running '%s' on this game (client) instead of sending it to the server"), *Message.TrimStartAndEnd());
-	Commands->RunChatCommand(Message.TrimStartAndEnd().RightChop(1), Sender);
+	const EExecutionStatus Status = Execute(Sender, Arguments);
+	UE_LOG(LogAdaVoicePacks, Log, TEXT("Ran '%s' on this game (client) instead of sending it to the server: %s"), *Message.TrimStartAndEnd(), *StaticEnum<EExecutionStatus>()->GetNameStringByValue(static_cast<int64>(Status)));
 	return true;
 }
 

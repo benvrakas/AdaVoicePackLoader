@@ -11,7 +11,7 @@ class AFGPlayerController;
 // "/adapack list" lists the installed packs and their lines, "/adapack play <pack> <line>" plays one now, "/adapack
 // trigger <name> [argument]" fires a trigger as if it happened. In single-player and on a host SML runs it; on a client
 // RunOnClient runs it on the player's own game, since the server (often without this mod) would only answer
-// "Unknown command".
+// "Unknown command" and SML's command list exists only on the server.
 UCLASS()
 class ADAVOICEPACKLOADER_API AAdaChatCommand : public AChatCommandInstance
 {
@@ -25,6 +25,10 @@ public:
 	// Runs Message on this machine if it is an /adapack command typed on a client. Returns true if it was handled, and
 	// then it must not be sent to the server.
 	static bool RunOnClient(AFGPlayerController* Controller, const FString& Message);
+
+private:
+	// The command itself, for SML's call and for RunOnClient; Arguments are the words after "/adapack".
+	static EExecutionStatus Execute(UCommandSender* Sender, const TArray<FString>& Arguments);
 };
 
 // The local player as a command sender: replies go straight into this game's chat box.

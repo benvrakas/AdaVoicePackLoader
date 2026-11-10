@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.4
+
+- Fixes `/adapack` on a dedicated server, which 1.1.3 answered with "/adapack isn't ready yet": SML's command list only
+  exists on the server, so the client now runs the command itself.
+
 ## 1.1.3
 
 - `/adapack` now works for a player on a dedicated server: the command runs on your own game instead of going to the
