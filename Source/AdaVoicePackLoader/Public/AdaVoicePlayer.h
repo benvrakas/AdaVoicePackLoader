@@ -58,6 +58,10 @@ private:
 	UPROPERTY()
 	TObjectPtr<UFGMessage> PendingMessage;
 
+	// The mod's messages still in the game's queue whose line was stopped or played without the box; their box is
+	// closed when it starts.
+	TSet<TWeakObjectPtr<UFGMessage>> AbandonedMessages;
+
 	UPROPERTY()
 	TSubclassOf<UFGMessageSender> AdaSender;
 

@@ -165,6 +165,7 @@ void UAdaVoicePlayer::Tick(float DeltaSeconds)
 	if (PendingMessage && Now - PendingSince > BoxTimeoutSeconds)
 	{
 		UE_LOG(LogAdaVoicePacks, Warning, TEXT("The message box didn't start '%s' within %.0f s; playing it without the box"), CurrentLine ? *CurrentLine->EventName : TEXT("?"), BoxTimeoutSeconds);
+		AbandonedMessages.Add(PendingMessage.Get());
 		StartVoice(false);
 	}
 	if (ShownBox.IsValid() || ShownBoxSince > 0.0)
@@ -455,10 +456,9 @@ void UAdaVoicePlayer::NotifyAudioMessageStarted(UFGAudioMessage* AudioMessage)
 		Player->ShownBoxSince = FPlatformTime::Seconds();
 		Player->StartVoice(true);
 	}
-	else if (Message && Player && Message->GetOuter() == Player)
+	else if (Message && Player && Player->AbandonedMessages.Remove(const_cast<UFGMessage*>(Message)) > 0)
 	{
-		// One of the mod's messages whose line was stopped while it waited in the queue: close its box.
-		UE_LOG(LogAdaVoicePacks, Log, TEXT("Message box started a line that was stopped while queued; closing it"));
+		UE_LOG(LogAdaVoicePacks, Log, TEXT("Message box started a line that was stopped or played without it while queued; closing it"));
 		AudioMessage->CancelPlayback();
 	}
 }
@@ -502,6 +502,10 @@ void UAdaVoicePlayer::StartVoice(bool bBoxShown)
 
 void UAdaVoicePlayer::StopLine()
 {
+	if (PendingMessage)
+	{
+		AbandonedMessages.Add(PendingMessage.Get());
+	}
 	PendingMessage = nullptr;
 	if (WwisePlayingId != 0)
 	{

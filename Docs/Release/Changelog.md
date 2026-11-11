@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+- Fixes 1.2.0 cutting every line off as it started: the game starts a message box twice, and the second start was
+  taken for a stopped line, so the box closed and the voice stopped with it. Only boxes of lines that were stopped (or
+  played without the box) while queued are closed now.
+
 ## 1.2.0
 
 - On/off switch: Mods menu > ADA Voice Pack Loader > "Play ADA voice lines" (main menu or pause menu). Off, no pack
