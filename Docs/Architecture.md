@@ -44,7 +44,15 @@ itself (`AAdaChatCommand::Execute`) with `UAdaLocalCommandSender`, whose replies
 SML's `AChatCommandSubsystem` can't be used there: it spawns only on the server (1.1.3 tried it and answered "isn't ready
 yet" on every client). Single-player and the host still go through SML as before.
 
+## Settings
+
+`UAdaVoicePackConfiguration` (`AdaSettings.cpp`) is the mod's page in SML's Mods menu, registered by the native root
+module `UAdaGameInstanceModule`. The mod has no assets, so the root section is built in code at the module's
+initialization, before SML copies it, from SML's `BP_ConfigPropertySection` / `BP_ConfigPropertyBool` (the Blueprint
+subclasses carry the menu widgets). SML saves it in `Configs/AdaVoicePackLoader.cfg`. The one switch, `Enabled`, is read
+every tick by `UAdaVoicePlayer`: off, `Fire` and `PlayNow` refuse, and a line playing or queued stops and its message
+box closes.
+
 ## Not yet
 
-- No settings menu (no on/off switch except removing the pack mods).
 - Events in the game beyond the three in `Triggers.md`.

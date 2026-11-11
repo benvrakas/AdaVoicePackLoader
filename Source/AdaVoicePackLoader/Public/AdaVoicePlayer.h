@@ -96,4 +96,7 @@ private:
 	TMap<FString, float> EventCountdowns;
 
 	bool bBanksTried = false;
+
+	// The on/off switch in the mod's settings, read every tick.
+	bool bEnabled = true;
 };

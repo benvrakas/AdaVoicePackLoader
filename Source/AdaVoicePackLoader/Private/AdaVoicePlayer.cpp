@@ -1,6 +1,7 @@
 #include "AdaVoicePlayer.h"
 #include "AdaGameEvents.h"
 #include "AdaPackRegistry.h"
+#include "AdaSettings.h"
 #include "AdaVoicePackLoaderModule.h"
 #include "AdaWwise.h"
 #include "Engine/Engine.h"
@@ -145,6 +146,21 @@ void UAdaVoicePlayer::Tick(float DeltaSeconds)
 		}
 	}
 
+	const bool bEnabledNow = AdaSettings::IsEnabled(World);
+	if (bEnabledNow != bEnabled)
+	{
+		bEnabled = bEnabledNow;
+		UE_LOG(LogAdaVoicePacks, Log, TEXT("Voice lines turned %s in the mod's settings"), bEnabled ? TEXT("on") : TEXT("off"));
+		if (!bEnabled && (IsSpeaking() || PendingMessage))
+		{
+			if (ShownBox.IsValid())
+			{
+				ShownBox->CancelPlayback();
+			}
+			StopLine();
+		}
+	}
+
 	const double Now = FPlatformTime::Seconds();
 	if (PendingMessage && Now - PendingSince > BoxTimeoutSeconds)
 	{
@@ -277,6 +293,10 @@ void UAdaVoicePlayer::PollTriggers(float DeltaSeconds)
 
 bool UAdaVoicePlayer::Fire(const FString& Name, float Arg)
 {
+	if (!bEnabled)
+	{
+		return false;
+	}
 	const double Now = FPlatformTime::Seconds();
 	FAdaPackRegistry& Registry = FAdaPackRegistry::Get();
 	const FAdaEventRule Rule = Registry.GetEventRule(Name);
@@ -340,6 +360,11 @@ bool UAdaVoicePlayer::PlayNow(const FString& PackId, const FString& LineId, FStr
 	if (!Line)
 	{
 		OutReason = TEXT("no such line");
+		return false;
+	}
+	if (!bEnabled)
+	{
+		OutReason = TEXT("voice lines are turned off in the mod's settings (Mods menu)");
 		return false;
 	}
 	if (!Queue(*Line, true))
@@ -429,6 +454,12 @@ void UAdaVoicePlayer::NotifyAudioMessageStarted(UFGAudioMessage* AudioMessage)
 		Player->ShownBox = AudioMessage;
 		Player->ShownBoxSince = FPlatformTime::Seconds();
 		Player->StartVoice(true);
+	}
+	else if (Message && Player && Message->GetOuter() == Player)
+	{
+		// One of the mod's messages whose line was stopped while it waited in the queue: close its box.
+		UE_LOG(LogAdaVoicePacks, Log, TEXT("Message box started a line that was stopped while queued; closing it"));
+		AudioMessage->CancelPlayback();
 	}
 }
 

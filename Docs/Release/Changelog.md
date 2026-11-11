@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0
+
+- On/off switch: Mods menu > ADA Voice Pack Loader > "Play ADA voice lines" (main menu or pause menu). Off, no pack
+  line plays and a line already playing stops; the packs stay installed. `/adapack play` says the lines are off.
+
 ## 1.1.4
 
 - Fixes `/adapack` on a dedicated server, which 1.1.3 answered with "/adapack isn't ready yet": SML's command list only
