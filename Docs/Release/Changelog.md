@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2
+
+- **For game 1.2.5.1** (the update of 18 November 2026). That update changed how the game stores factory buildings, so
+  the previous version read the wrong data on it. Needs SML 3.12.1, which also fixes the crash when joining a
+  multiplayer game on 1.2.5.1.
+
 ## 1.2.1
 
 - Fixes 1.2.0 cutting every line off as it started: the game starts a message box twice, and the second start was
